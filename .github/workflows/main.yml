@@ -1,40 +1,11 @@
-name: Self-Hosted Runner with Guaranteed Fallback
+name: Hello World Workflow
 
 on:
-  workflow_dispatch:  # manual trigger
+  workflow_dispatch:  # allows manual trigger
 
 jobs:
-  determine-runner:
-    runs-on: ubuntu-latest  # ensures workflow starts immediately
-    outputs:
-      runner: ${{ steps.set-runner.outputs.runner }}
+  say-hello:
+    runs-on: ubuntu-latest  # GitHub-hosted runner
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Determine runner with fallback
-        id: set-runner
-        uses: mikehardy/runner-fallback-action@v1
-        with:
-          self_hosted_label: linux   # your self-hosted runner label
-          fallback_to_github_runner: true
-
-      - name: Show selected runner
-        run: |
-          echo "Selected runner: $RUNNER_NAME"
-          echo "Labels: $RUNNER_LABELS"
-          echo "OS: $RUNNER_OS"
-
-  run-on-chosen-runner:
-    needs: determine-runner
-    runs-on: ${{ needs.determine-runner.outputs.runner }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Run a test command
-        run: |
-          echo "Running on $RUNNER_NAME"
-          echo "OS: $RUNNER_OS"
-          echo "Labels: $RUNNER_LABELS"
-          hostname
+      - name: Print Hello World
+        run: echo "Hello World from GitHub Actions!"
