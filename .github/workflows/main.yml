@@ -1,18 +1,25 @@
-name: Simple Test Workflow
+name: Self-Hosted Runner with Fallback
 
 on:
   workflow_dispatch:  # manual trigger
 
 jobs:
-  hello:
-    runs-on: self-hosted  # try your self-hosted runner first
+  run-with-fallback:
+    runs-on: [self-hosted, linux]  # tries self-hosted Linux runner first
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Print runner info
+      - name: Fallback to GitHub-hosted runner if self-hosted unavailable
+        uses: mikehardy/runner-fallback-action@v1
+        with:
+          fallback_to_github_runner: true
+          self_hosted_label: linux  # match your self-hosted runner label
+
+      - name: Show runner info
         run: |
           echo "Running on $(hostname)"
           echo "Runner labels: $RUNNER_LABELS"
           echo "OS: $RUNNER_OS"
+          echo "Runner type: $RUNNER_NAME"
