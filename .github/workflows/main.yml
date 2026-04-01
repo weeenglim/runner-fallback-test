@@ -1,25 +1,40 @@
-name: Self-Hosted Runner with Fallback
+name: Self-Hosted Runner with Guaranteed Fallback
 
 on:
   workflow_dispatch:  # manual trigger
 
 jobs:
-  run-with-fallback:
-    runs-on: [self-hosted, linux]  # tries self-hosted Linux runner first
-
+  determine-runner:
+    runs-on: ubuntu-latest  # fallback runner ensures the job starts immediately
+    outputs:
+      runner: ${{ steps.set-runner.outputs.runner }}
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Fallback to GitHub-hosted runner if self-hosted unavailable
+      - name: Determine runner with fallback
+        id: set-runner
         uses: mikehardy/runner-fallback-action@v1
         with:
           fallback_to_github_runner: true
-          self_hosted_label: linux  # match your self-hosted runner label
+          self_hosted_label: linux  # change to your self-hosted runner label
 
-      - name: Show runner info
+      - name: Show runner info for debugging
         run: |
-          echo "Running on $(hostname)"
-          echo "Runner labels: $RUNNER_LABELS"
+          echo "Selected runner: $RUNNER_NAME"
+          echo "Labels: $RUNNER_LABELS"
           echo "OS: $RUNNER_OS"
-          echo "Runner type: $RUNNER_NAME"
+
+  run-on-chosen-runner:
+    needs: determine-runner
+    runs-on: ${{ needs.determine-runner.outputs.runner }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Run a test command
+        run: |
+          echo "Running on $RUNNER_NAME"
+          echo "OS: $RUNNER_OS"
+          echo "Labels: $RUNNER_LABELS"
+          hostname
