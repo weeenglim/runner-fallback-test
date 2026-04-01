@@ -1,11 +1,24 @@
-name: Hello World Workflow
+name: Hello World Fallback
 
 on:
-  workflow_dispatch:  # allows manual trigger
+  workflow_dispatch:
 
 jobs:
-  say-hello:
-    runs-on: ubuntu-latest  # GitHub-hosted runner
+  hello:
+    runs-on: ubuntu-latest   # fallback runner
     steps:
-      - name: Print Hello World
-        run: echo "Hello World from GitHub Actions!"
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Select runner (self-hosted preferred)
+        id: select-runner
+        uses: mikehardy/runner-fallback-action@v1
+        with:
+          self_hosted_label: linux
+          fallback_to_github_runner: true
+
+      - name: Say Hello
+        run: |
+          echo "Hello World from $RUNNER_NAME!"
+          echo "OS: $RUNNER_OS"
+          echo "Labels: $RUNNER_LABELS"
