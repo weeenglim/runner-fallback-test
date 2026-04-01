@@ -5,18 +5,18 @@ on:
 
 jobs:
   determine-runner:
-    runs-on: ubuntu-latest  # ensures job starts immediately
+    runs-on: ubuntu-latest  # ensures workflow starts immediately
     outputs:
       runner: ${{ steps.set-runner.outputs.runner }}
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v3
 
       - name: Determine runner with fallback
         id: set-runner
         uses: mikehardy/runner-fallback-action@v1
         with:
-          self_hosted_label: linux   # replace with your self-hosted runner label if different
+          self_hosted_label: linux   # your self-hosted runner label
           fallback_to_github_runner: true
 
       - name: Show selected runner
@@ -29,7 +29,7 @@ jobs:
     needs: determine-runner
     runs-on: ${{ needs.determine-runner.outputs.runner }}
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v3
 
       - name: Run a test command
