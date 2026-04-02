@@ -17,12 +17,16 @@ jobs:
         run: |
           Write-Host "Checking if self-hosted runner is online..."
           
+          # Query the GitHub API for self-hosted runners
           $runners = Invoke-RestMethod -Headers @{Authorization = "Bearer $env:GITHUB_TOKEN"} `
                                         -Uri "https://api.github.com/repos/${env:GITHUB_REPOSITORY}/actions/runners"
           
-          $online = $runners.runners | Where-Object { $_.status -eq "online" -and $_.labels.name -contains "self-hosted" }
+          # Safely filter for online self-hosted runner
+          $online = @($runners.runners | Where-Object { 
+              $_.status -eq "online" -and $_.labels -ne $null -and $_.labels.name -contains "self-hosted" 
+          })
 
-          if ($online) {
+          if ($online.Count -gt 0) {
               Write-Host "Self-hosted runner is available"
               echo "::set-output name=available::true"
           } else {
@@ -30,12 +34,14 @@ jobs:
               echo "::set-output name=available::false"
           }
 
+          exit 0  # ensures the step never fails
+
   self_hosted_job:
     name: Run on Self-Hosted Runner
     runs-on: [self-hosted, windows]
     needs: check_runner
     if: ${{ needs.check_runner.outputs.self_hosted_available == 'true' }}
-    timeout-minutes: 1  # <- faster testing
+    timeout-minutes: 1  # fast test
     steps:
       - name: Hello from Self-Hosted
         run: |
