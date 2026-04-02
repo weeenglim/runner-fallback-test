@@ -1,40 +1,22 @@
-name: Check Self-Hosted Runner (Safe API Test)
+# Check that your token exists
+if (-not $env:GITHUB_TOKEN) {
+    Write-Host "GITHUB_TOKEN not set. Please set it first."
+    exit
+}
 
-on:
-  workflow_dispatch:
+$token = $env:GITHUB_TOKEN
+$headers = @{
+    Authorization = "token $token"
+    "User-Agent" = "PowerShell"
+}
 
-permissions:
-  actions: read  # Needed to query self-hosted runners
+# Simple API call to get your user info
+$url = "https://api.github.com/user"
 
-jobs:
-  check_runner:
-    runs-on: windows-latest
-    steps:
-      - name: Print GitHub env
-        run: |
-          Write-Host "Repository: $env:GITHUB_REPOSITORY"
-          Write-Host "GITHUB_TOKEN exists: $($env:GITHUB_TOKEN -ne $null)"
-
-      - name: Query self-hosted runners
-        run: |
-          $token = $env:GITHUB_TOKEN
-          $headers = @{
-              Authorization = "Bearer $token"
-              "User-Agent" = "PowerShell"
-          }
-          $url = "https://api.github.com/repos/$env:GITHUB_REPOSITORY/actions/runners"
-
-          try {
-              $runners = Invoke-RestMethod -Headers $headers -Uri $url -Method Get
-              Write-Host "Total runners in this repo: $($runners.total_count)"
-
-              $onlineRunners = $runners.runners | Where-Object { $_.status -eq "online" -and $_.labels -ne $null -and $_.labels.name -contains "self-hosted" }
-              if ($onlineRunners.Count -gt 0) {
-                  Write-Host "Self-hosted runners online:"
-                  $onlineRunners | ForEach-Object { Write-Host " - $($_.name)" }
-              } else {
-                  Write-Host "No self-hosted runners online"
-              }
-          } catch {
-              Write-Host "API call failed: $($_.Exception.Message)"
-          }
+try {
+    $response = Invoke-RestMethod -Headers $headers -Uri $url -Method Get
+    Write-Host "GitHub API is working!"
+    Write-Host "Authenticated as: $($response.login)"
+} catch {
+    Write-Host "API call failed: $($_.Exception.Message)"
+}
