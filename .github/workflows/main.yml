@@ -6,20 +6,13 @@ on:
 jobs:
   test-api:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
       - name: Test GitHub API with PowerShell
         shell: pwsh
         run: |
-          if (-not $env:GITHUB_TOKEN) {
-              Write-Host "Error: GITHUB_TOKEN not set."
-              exit 1
-          }
-
-          $token = $env:GITHUB_TOKEN
+          $token = "${{ secrets.GITHUB_TOKEN }}"
           $headers = @{
               Authorization = "token $token"
               "User-Agent"  = "PowerShell"
