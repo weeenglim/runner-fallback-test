@@ -1,42 +1,15 @@
-name: Hello World (Self-hosted fallback)
+name: Hello from Self-Hosted
 
 on:
   workflow_dispatch:
 
-permissions:
-  actions: read
-
 jobs:
-  detect:
-    runs-on: ubuntu-latest
-    outputs:
-      use_self_hosted: ${{ steps.set.outputs.use_self_hosted }}
-
-    steps:
-      - id: set
-        run: |
-          echo "Checking for available self-hosted runners..."
-
-          count=$(curl -s \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            https://api.github.com/repos/${{ github.repository }}/actions/runners \
-            | grep -c '"status": "online"')
-
-          echo "Online runners found: $count"
-
-          if [ "$count" -gt 0 ]; then
-            echo "use_self_hosted=true" >> $GITHUB_OUTPUT
-          else
-            echo "use_self_hosted=false" >> $GITHUB_OUTPUT
-          fi
-
   hello:
-    needs: detect
-    runs-on: ${{ needs.detect.outputs.use_self_hosted == 'true' && 'self-hosted' || 'windows-latest' }}
+    runs-on: [self-hosted, windows]
 
     steps:
       - name: Say Hello
         run: |
-          echo "Hello World!"
-          echo "Runner: $RUNNER_NAME"
-          echo "OS: $RUNNER_OS"
+          echo Hello World from self-hosted runner!
+          echo Runner Name: %RUNNER_NAME%
+          echo OS: %RUNNER_OS%
