@@ -16,11 +16,16 @@ jobs:
       - id: check
         run: |
           Write-Host "Checking if self-hosted runner is online..."
-          
-          # Query the GitHub API for self-hosted runners
-          $runners = Invoke-RestMethod -Headers @{Authorization = "Bearer $env:GITHUB_TOKEN"} `
-                                        -Uri "https://api.github.com/repos/${env:GITHUB_REPOSITORY}/actions/runners"
-          
+
+          try {
+              $runners = Invoke-RestMethod -Headers @{Authorization = "Bearer $env:GITHUB_TOKEN"} `
+                                            -Uri "https://api.github.com/repos/${env:GITHUB_REPOSITORY}/actions/runners"
+          } catch {
+              Write-Host "Failed to query GitHub API. Treating as no runner available."
+              echo "::set-output name=available::false"
+              exit 0
+          }
+
           # Safely filter for online self-hosted runner
           $online = @($runners.runners | Where-Object { 
               $_.status -eq "online" -and $_.labels -ne $null -and $_.labels.name -contains "self-hosted" 
