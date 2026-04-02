@@ -1,24 +1,52 @@
-name: Hello World Fallback
+name: Smart runner fallback
 
 on:
   workflow_dispatch:
+  push:
 
 jobs:
-  hello:
-    runs-on: ubuntu-latest   # fallback runner
+  detect_runner:
+    name: Detect self-hosted runner availability
+    runs-on: ubuntu-latest
+    outputs:
+      use_self_hosted: ${{ steps.check.outputs.available }}
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Select runner (self-hosted preferred)
-        id: select-runner
-        uses: mikehardy/runner-fallback-action@v1
-        with:
-          self_hosted_label: linux
-          fallback_to_github_runner: true
-
-      - name: Say Hello
+      - name: Check for online self-hosted runner
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Hello World from $RUNNER_NAME!"
+          echo "Checking self-hosted runner availability..."
+
+          runners=$(curl -s \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${{ github.repository }}/actions/runners)
+
+          online=$(echo "$runners" | jq '[.runners[] | select(.status=="online" and .busy==false)] | length')
+
+          echo "Available runners: $online"
+
+          if [ "$online" -gt 0 ]; then
+            echo "available=true" >> $GITHUB_OUTPUT
+          else
+            echo "available=false" >> $GITHUB_OUTPUT
+          fi
+
+  run_job:
+    name: Run on best available runner
+    needs: detect_runner
+    runs-on: ${{ needs.detect_runner.outputs.use_self_hosted == 'true' && 'self-hosted' || 'windows-latest' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Print runner info
+        run: |
+          echo "Running on: $RUNNER_NAME"
           echo "OS: $RUNNER_OS"
-          echo "Labels: $RUNNER_LABELS"
+
+      - name: Your actual work
+        run: echo "Hello from selected runner"
