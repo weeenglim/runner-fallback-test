@@ -1,4 +1,4 @@
-name: Hello World Self-Hosted with Fallback (Simpler)
+name: Hello World Self-Hosted with Fallback (Timeout Version)
 
 on:
   workflow_dispatch:
@@ -7,8 +7,8 @@ jobs:
   self_hosted_job:
     name: Run on Self-Hosted Runner
     runs-on: [self-hosted, windows]
-    timeout-minutes: 1
-    continue-on-error: true  # allow fallback if self-hosted fails
+    timeout-minutes: 1  # Timeout after 1 minute if self-hosted runner doesn't pick up
+    continue-on-error: true  # Allow fallback if self-hosted fails to run
     steps:
       - name: Hello from Self-Hosted
         run: |
@@ -21,6 +21,7 @@ jobs:
     runs-on: windows-latest
     needs: self_hosted_job
     if: ${{ always() && needs.self_hosted_job.result == 'failure' }}
+    timeout-minutes: 1  # Optional: Timeout for the fallback job as well
     steps:
       - name: Hello from GitHub-hosted
         run: |
