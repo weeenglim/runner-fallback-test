@@ -1,53 +1,14 @@
-name: Hello World Self-Hosted with Fallback
+name: Hello World Self-Hosted with Fallback (Simpler)
 
 on:
   workflow_dispatch:
 
-permissions:
-  actions: read  # Needed to query self-hosted runners
-
 jobs:
-  check_runner:
-    name: Check self-hosted runner
-    runs-on: windows-latest
-    outputs:
-      self_hosted_available: ${{ steps.check.outputs.available }}
-    steps:
-      - id: check
-        run: |
-          Write-Host "Checking for self-hosted runner..."
-
-          # Use try/catch only to prevent API failures from crashing workflow
-          try {
-              $runners = Invoke-RestMethod -Headers @{Authorization = "Bearer $env:GITHUB_TOKEN"} `
-                                            -Uri "https://api.github.com/repos/$env:GITHUB_REPOSITORY/actions/runners"
-          } catch {
-              Write-Host "Warning: API call failed, but we will test self-hosted runner anyway."
-              echo "::set-output name=available::false"
-              exit 0
-          }
-
-          # Check for online self-hosted runner
-          $online = @($runners.runners | Where-Object {
-              $_.status -eq "online" -and $_.labels -ne $null -and $_.labels.name -contains "self-hosted"
-          })
-
-          if ($online.Count -gt 0) {
-              Write-Host "Self-hosted runner is available"
-              echo "::set-output name=available::true"
-          } else {
-              Write-Host "No self-hosted runner found"
-              echo "::set-output name=available::false"
-          }
-
-          exit 0
-
   self_hosted_job:
     name: Run on Self-Hosted Runner
     runs-on: [self-hosted, windows]
-    needs: check_runner
-    if: ${{ needs.check_runner.outputs.self_hosted_available == 'true' }}
     timeout-minutes: 1
+    continue-on-error: true  # allow fallback if self-hosted fails
     steps:
       - name: Hello from Self-Hosted
         run: |
@@ -58,8 +19,8 @@ jobs:
   fallback_job:
     name: Fallback to GitHub Runner
     runs-on: windows-latest
-    needs: check_runner
-    if: ${{ needs.check_runner.outputs.self_hosted_available == 'false' }}
+    needs: self_hosted_job
+    if: ${{ always() && needs.self_hosted_job.result == 'failure' }}
     steps:
       - name: Hello from GitHub-hosted
         run: |
