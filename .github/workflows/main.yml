@@ -1,4 +1,4 @@
-name: Hello World Fallback (PowerShell)
+name: Hello World Fallback (PowerShell, 1-min timeout)
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ jobs:
     name: Try self-hosted runner
     runs-on: [self-hosted, windows]
     continue-on-error: true
-    timeout-minutes: 1
+    timeout-minutes: 1  # <- stops after 1 minute if offline
 
     steps:
       - name: Say Hello (Self-Hosted)
