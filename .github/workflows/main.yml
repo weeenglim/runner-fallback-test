@@ -1,15 +1,30 @@
-name: Hello from Self-Hosted
+name: Hello World Fallback (PowerShell)
 
 on:
   workflow_dispatch:
 
 jobs:
-  hello:
+  self_hosted:
+    name: Try self-hosted runner
     runs-on: [self-hosted, windows]
+    continue-on-error: true
 
     steps:
-      - name: Say Hello
+      - name: Say Hello (Self-Hosted)
         run: |
-          echo "Hello World from self-hosted runner!"
-          echo "Runner Name: $env:RUNNER_NAME"
-          echo "OS: $env:RUNNER_OS"
+          Write-Host "Hello World from self-hosted runner!"
+          Write-Host "Runner: $env:RUNNER_NAME"
+          Write-Host "OS: $env:RUNNER_OS"
+
+  github_runner:
+    name: Fallback to GitHub-hosted
+    runs-on: windows-latest
+    needs: self_hosted
+    if: ${{ needs.self_hosted.result != 'success' }}
+
+    steps:
+      - name: Say Hello (GitHub Runner)
+        run: |
+          Write-Host "Hello World from GitHub-hosted runner!"
+          Write-Host "Runner: $env:RUNNER_NAME"
+          Write-Host "OS: $env:RUNNER_OS"
