@@ -4,27 +4,27 @@ on:
   workflow_dispatch: # lets you run it manually
 
 jobs:
-  test-api:
+  self-hosted-check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
-      - name: Test GitHub API with PowerShell
+      - name: Check self-hosted runners
         shell: pwsh
         run: |
-          $token = "${{ secrets.GITHUB_TOKEN }}"
+          $token = "${{ secrets.MY_GITHUB_PAT }}"
           $headers = @{
               Authorization = "token $token"
               "User-Agent"  = "PowerShell"
           }
 
-          $url = "https://api.github.com/user"
+          $repo = "${{ github.repository }}"
+          $url = "https://api.github.com/repos/$repo/actions/runners"
 
           try {
-              $response = Invoke-RestMethod -Headers $headers -Uri $url -Method Get
-              Write-Host "✅ GitHub API is working!"
-              Write-Host "Authenticated as: $($response.login)"
+              $runners = Invoke-RestMethod -Headers $headers -Uri $url -Method Get
+              Write-Host "Total runners: $($runners.total_count)"
           } catch {
-              Write-Host "❌ API call failed: $($_.Exception.Message)"
+              Write-Host "API call failed: $($_.Exception.Message)"
               exit 1
           }
