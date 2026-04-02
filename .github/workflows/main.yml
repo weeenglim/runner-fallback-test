@@ -1,52 +1,42 @@
-name: Smart runner fallback
+name: Hello World (Self-hosted fallback)
 
 on:
   workflow_dispatch:
-  push:
+
+permissions:
+  actions: read
 
 jobs:
-  detect_runner:
-    name: Detect self-hosted runner availability
+  detect:
     runs-on: ubuntu-latest
     outputs:
-      use_self_hosted: ${{ steps.check.outputs.available }}
+      use_self_hosted: ${{ steps.set.outputs.use_self_hosted }}
 
     steps:
-      - name: Check for online self-hosted runner
-        id: check
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - id: set
         run: |
-          echo "Checking self-hosted runner availability..."
+          echo "Checking for available self-hosted runners..."
 
-          runners=$(curl -s \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/${{ github.repository }}/actions/runners)
+          count=$(curl -s \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            https://api.github.com/repos/${{ github.repository }}/actions/runners \
+            | grep -c '"status": "online"')
 
-          online=$(echo "$runners" | jq '[.runners[] | select(.status=="online" and .busy==false)] | length')
+          echo "Online runners found: $count"
 
-          echo "Available runners: $online"
-
-          if [ "$online" -gt 0 ]; then
-            echo "available=true" >> $GITHUB_OUTPUT
+          if [ "$count" -gt 0 ]; then
+            echo "use_self_hosted=true" >> $GITHUB_OUTPUT
           else
-            echo "available=false" >> $GITHUB_OUTPUT
+            echo "use_self_hosted=false" >> $GITHUB_OUTPUT
           fi
 
-  run_job:
-    name: Run on best available runner
-    needs: detect_runner
-    runs-on: ${{ needs.detect_runner.outputs.use_self_hosted == 'true' && 'self-hosted' || 'windows-latest' }}
+  hello:
+    needs: detect
+    runs-on: ${{ needs.detect.outputs.use_self_hosted == 'true' && 'self-hosted' || 'windows-latest' }}
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Print runner info
+      - name: Say Hello
         run: |
-          echo "Running on: $RUNNER_NAME"
+          echo "Hello World!"
+          echo "Runner: $RUNNER_NAME"
           echo "OS: $RUNNER_OS"
-
-      - name: Your actual work
-        run: echo "Hello from selected runner"
