@@ -1,22 +1,37 @@
-# Check that your token exists
-if (-not $env:GITHUB_TOKEN) {
-    Write-Host "GITHUB_TOKEN not set. Please set it first."
-    exit
-}
+name: Test GitHub API
 
-$token = $env:GITHUB_TOKEN
-$headers = @{
-    Authorization = "token $token"
-    "User-Agent" = "PowerShell"
-}
+on:
+  workflow_dispatch: # lets you run it manually
 
-# Simple API call to get your user info
-$url = "https://api.github.com/user"
+jobs:
+  test-api:
+    runs-on: ubuntu-latest
 
-try {
-    $response = Invoke-RestMethod -Headers $headers -Uri $url -Method Get
-    Write-Host "GitHub API is working!"
-    Write-Host "Authenticated as: $($response.login)"
-} catch {
-    Write-Host "API call failed: $($_.Exception.Message)"
-}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Test GitHub API with PowerShell
+        shell: pwsh
+        run: |
+          if (-not $env:GITHUB_TOKEN) {
+              Write-Host "Error: GITHUB_TOKEN not set."
+              exit 1
+          }
+
+          $token = $env:GITHUB_TOKEN
+          $headers = @{
+              Authorization = "token $token"
+              "User-Agent"  = "PowerShell"
+          }
+
+          $url = "https://api.github.com/user"
+
+          try {
+              $response = Invoke-RestMethod -Headers $headers -Uri $url -Method Get
+              Write-Host "✅ GitHub API is working!"
+              Write-Host "Authenticated as: $($response.login)"
+          } catch {
+              Write-Host "❌ API call failed: $($_.Exception.Message)"
+              exit 1
+          }
