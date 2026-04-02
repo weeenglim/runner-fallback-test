@@ -1,15 +1,19 @@
-name: Test GitHub API
+name: Hello World - Self-Hosted Check
 
 on:
-  workflow_dispatch: # lets you run it manually
+  workflow_dispatch:
 
 jobs:
-  self-hosted-check:
-    runs-on: ubuntu-latest
+  check-self-hosted:
+    runs-on: windows-latest
+    outputs:
+      runner_type: ${{ steps.set_runner_type.outputs.runner_type }}
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      - name: Check self-hosted runners
+      - name: Check for self-hosted runners
+        id: set_runner_type
         shell: pwsh
         run: |
           $token = "${{ secrets.MY_GITHUB_PAT }}"
@@ -23,8 +27,28 @@ jobs:
 
           try {
               $runners = Invoke-RestMethod -Headers $headers -Uri $url -Method Get
-              Write-Host "Total runners: $($runners.total_count)"
+              $onlineRunners = $runners.runners | Where-Object { $_.status -eq "online" -and $_.labels.name -contains "self-hosted" }
+
+              if ($onlineRunners.Count -gt 0) {
+                  Write-Host "Self-hosted runner found: $($onlineRunners[0].name)"
+                  echo "::set-output name=runner_type::self-hosted"
+              } else {
+                  Write-Host "No self-hosted runner online. Will fallback to GitHub-hosted runner."
+                  echo "::set-output name=runner_type::windows-latest"
+              }
           } catch {
               Write-Host "API call failed: $($_.Exception.Message)"
-              exit 1
+              echo "::set-output name=runner_type::windows-latest"
           }
+
+  hello-world:
+    needs: check-self-hosted
+    runs-on: ${{ needs.check-self-hosted.outputs.runner_type }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Hello World
+        run: |
+          Write-Host "Hello World!"
+          Write-Host "Running on: ${{ runner.os }} runner"
