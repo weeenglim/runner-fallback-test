@@ -8,6 +8,7 @@ jobs:
     name: Try self-hosted runner
     runs-on: [self-hosted, windows]
     continue-on-error: true
+    timeout-minutes: 1
 
     steps:
       - name: Say Hello (Self-Hosted)
