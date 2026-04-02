@@ -1,30 +1,40 @@
-name: Hello World Self-Hosted with Fallback (Timeout Version)
+name: Check Self-Hosted Runner (Safe API Test)
 
 on:
   workflow_dispatch:
 
-jobs:
-  self_hosted_job:
-    name: Run on Self-Hosted Runner
-    runs-on: [self-hosted, windows]
-    timeout-minutes: 1  # Timeout after 1 minute if self-hosted runner doesn't pick up
-    continue-on-error: true  # Allow fallback if self-hosted fails to run
-    steps:
-      - name: Hello from Self-Hosted
-        run: |
-          Write-Host "Hello World from self-hosted runner!"
-          Write-Host "Runner: $env:RUNNER_NAME"
-          Write-Host "OS: $env:RUNNER_OS"
+permissions:
+  actions: read  # Needed to query self-hosted runners
 
-  fallback_job:
-    name: Fallback to GitHub Runner
+jobs:
+  check_runner:
     runs-on: windows-latest
-    needs: self_hosted_job
-    if: ${{ always() && needs.self_hosted_job.result == 'failure' }}
-    timeout-minutes: 1  # Optional: Timeout for the fallback job as well
     steps:
-      - name: Hello from GitHub-hosted
+      - name: Print GitHub env
         run: |
-          Write-Host "Hello World from GitHub-hosted runner!"
-          Write-Host "Runner: $env:RUNNER_NAME"
-          Write-Host "OS: $env:RUNNER_OS"
+          Write-Host "Repository: $env:GITHUB_REPOSITORY"
+          Write-Host "GITHUB_TOKEN exists: $($env:GITHUB_TOKEN -ne $null)"
+
+      - name: Query self-hosted runners
+        run: |
+          $token = $env:GITHUB_TOKEN
+          $headers = @{
+              Authorization = "Bearer $token"
+              "User-Agent" = "PowerShell"
+          }
+          $url = "https://api.github.com/repos/$env:GITHUB_REPOSITORY/actions/runners"
+
+          try {
+              $runners = Invoke-RestMethod -Headers $headers -Uri $url -Method Get
+              Write-Host "Total runners in this repo: $($runners.total_count)"
+
+              $onlineRunners = $runners.runners | Where-Object { $_.status -eq "online" -and $_.labels -ne $null -and $_.labels.name -contains "self-hosted" }
+              if ($onlineRunners.Count -gt 0) {
+                  Write-Host "Self-hosted runners online:"
+                  $onlineRunners | ForEach-Object { Write-Host " - $($_.name)" }
+              } else {
+                  Write-Host "No self-hosted runners online"
+              }
+          } catch {
+              Write-Host "API call failed: $($_.Exception.Message)"
+          }
